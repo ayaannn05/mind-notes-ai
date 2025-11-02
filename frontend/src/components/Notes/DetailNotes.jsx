@@ -1,5 +1,4 @@
-import React from 'react'
-import FormattedMarkdown from '../../utils/FormattedMarkdown';
+import FormattedMarkdown from "../../utils/FormattedMarkdown";
 const DetailNotes = ({ note }) => {
   return (
     <div className="prose max-w-none">
@@ -8,4 +7,4 @@ const DetailNotes = ({ note }) => {
   );
 };
 
-export default DetailNotes
+export default DetailNotes;

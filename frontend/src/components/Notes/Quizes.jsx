@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { FaPlay, FaLightbulb, FaCheck, FaTimes, FaTrophy, FaRegClock } from 'react-icons/fa';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  FaPlay,
+  FaLightbulb,
+  FaCheck,
+  FaTimes,
+  FaTrophy,
+  FaRegClock,
+} from "react-icons/fa";
 
 const Quizes = ({ note }) => {
   const [started, setStarted] = useState(false);
@@ -10,7 +17,6 @@ const Quizes = ({ note }) => {
   const [showHint, setShowHint] = useState(false);
   const [answers, setAnswers] = useState([]);
   const [completed, setCompleted] = useState(false);
-  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
 
   const questions = note.quizzes[0]?.questions || [];
 
@@ -21,11 +27,9 @@ const Quizes = ({ note }) => {
   const handleAnswer = (option) => {
     setSelectedAnswer(option);
     setShowExplanation(true);
-    setShowCorrectAnswer(false);
+
     const isCorrect = option === questions[currentQuestion].correct_answer;
-    if (!isCorrect) {
-      setShowCorrectAnswer(true);
-    }
+
     setAnswers([
       ...answers,
       {
