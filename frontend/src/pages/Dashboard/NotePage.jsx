@@ -17,6 +17,7 @@ import Summary from "../../components/Notes/summary";
 import DetailNotes from "../../components/Notes/DetailNotes";
 import Loader from "../../components/common/Loader";
 import ChatBot from "../../components/Chatbot";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const NotePage = () => {
   const { id } = useParams();
@@ -32,6 +33,10 @@ const NotePage = () => {
   const [isChatOpen, setIsChatOpen] = useState(isChatParams === "true");
   const [chatWidth, setChatWidth] = useState(600); // Default chat width
   const [isResizing, setIsResizing] = useState(false);
+
+  useDocumentTitle(
+    note ? `${note.title} - Mind Notes` : "Loading... - Mind Notes"
+  );
 
   const containerRef = useRef(null);
 

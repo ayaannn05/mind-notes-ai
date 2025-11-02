@@ -16,8 +16,10 @@ import {
 } from "react-icons/fa";
 import CreateNoteModal from "../../components/CreateNoteModal";
 import EditNoteModal from "../../components/EditNoteModal";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const Dashboard = () => {
+  useDocumentTitle("Dashboard - Mind Notes");
   const [user, setUser] = useState(null);
   const [notes, setNotes] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
