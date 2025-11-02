@@ -133,3 +133,19 @@ exports.deleteNote = catchAsyncError(async (req, res, next) => {
         message: 'Note deleted',
     });
 });
+
+exports.updateNote = catchAsyncError(async (req, res, next) => {
+  const { title } = req.body;
+  const note = await Note.findByIdAndUpdate(
+    req.params.id,
+    { title },
+    { new: true, runValidators: true }
+  );
+  if (!note) {
+    return next(new AppError("Note not found", 404));
+  }
+  res.status(200).json({
+    status: "success",
+    note: note,
+  });
+});

@@ -50,3 +50,18 @@ export const getNote = async (id) => {
         throw error.message;
     }
 }
+export const updateNote = async (id, updatedFields) => {
+  try {
+    const { data } = await axios.patch(
+      `${API_URL}/api/v1/notes/${id}`,
+      updatedFields,
+      { withCredentials: true }
+    );
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw error.response.data.message;
+    }
+    throw error.message;
+  }
+};
