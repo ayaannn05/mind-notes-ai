@@ -101,7 +101,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 sm:gap-6">
+          <div className="flex flex-col items-center  gap-4 sm:gap-6">
             {filteredNotes.map((note, index) => (
               <div
                 key={index}
@@ -148,7 +148,7 @@ const Dashboard = () => {
 
                   {/* Content Section */}
                   <div className="mb-5">
-                    <p className="text-gray-600 leading-relaxed text-sm sm:text-base line-clamp-3">
+                    <p className="text-gray-600 leading-relaxed text-sm sm:text-base line-clamp-2">
                       {note.summary || "No content available"}
                     </p>
                   </div>
