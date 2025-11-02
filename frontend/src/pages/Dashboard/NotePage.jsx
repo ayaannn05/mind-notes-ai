@@ -1,9 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { getNote } from "../../apis/notes";
 import toast from "react-hot-toast";
 import { exportSessionInPdf } from "../../utils/exportToPdf";
-import { FaDownload, FaArrowLeft, FaComment, FaTimes } from "react-icons/fa";
+import {
+  FaDownload,
+  FaArrowLeft,
+  FaComment,
+  FaTimes,
+  FaGripVertical,
+} from "react-icons/fa";
 import { Link } from "react-router-dom";
 import Flashcard from "../../components/Notes/Flashcard";
 import Quizes from "../../components/Notes/quizes";
@@ -19,6 +25,10 @@ const NotePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatWidth, setChatWidth] = useState(600); // Default chat width
+  const [isResizing, setIsResizing] = useState(false);
+
+  const containerRef = useRef(null);
 
   useEffect(() => {
     const fetchNote = async () => {
@@ -37,31 +47,56 @@ const NotePage = () => {
     fetchNote();
   }, [id]);
 
+  // Resizing logic
+  const startResizing = () => {
+    setIsResizing(true);
+  };
+
+  const stopResizing = () => {
+    setIsResizing(false);
+  };
+
+  const resize = (e) => {
+    if (isResizing && containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const newWidth = containerWidth - e.clientX;
+
+      // Min width: 300px, Max width: 70% of container
+      const minWidth = 300;
+      const maxWidth = containerWidth * 0.7;
+
+      if (newWidth >= minWidth && newWidth <= maxWidth) {
+        setChatWidth(newWidth);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener("mousemove", resize);
+      document.addEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "ew-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      document.removeEventListener("mousemove", resize);
+      document.removeEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", resize);
+      document.removeEventListener("mouseup", stopResizing);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing]);
+
   const tabs = [
-    {
-      id: "summary",
-      label: "Summary",
-      icon: "📝",
-      color: "from-blue-500 to-blue-600",
-    },
-    {
-      id: "notes",
-      label: "Study Notes",
-      icon: "📚",
-      color: "from-green-500 to-green-600",
-    },
-    {
-      id: "flashcards",
-      label: "Flashcards",
-      icon: "🗂️",
-      color: "from-purple-500 to-purple-600",
-    },
-    {
-      id: "quiz",
-      label: "Quiz",
-      icon: "✍️",
-      color: "from-pink-500 to-pink-600",
-    },
+    { id: "summary", label: "Summary", icon: "📝" },
+    { id: "notes", label: "Study Notes", icon: "📚" },
+    { id: "flashcards", label: "Flashcards", icon: "🗂️" },
+    { id: "quiz", label: "Quiz", icon: "✍️" },
   ];
 
   if (isLoading) return <Loader />;
@@ -110,126 +145,152 @@ const NotePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
-        {/* Header Section */}
-        <div className="mb-8 sm:mb-12">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-            {/* Title Section */}
-            <div className="flex items-start gap-4 flex-1 min-w-0">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex flex-col">
+      {/* Sticky Header with Title, Tabs, and Actions */}
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-md flex-shrink-0">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4 gap-4">
+            {/* Left: Back Button + Title */}
+            <div className="flex items-center gap-3 min-w-0 flex-shrink">
               <Link
                 to="/dashboard"
-                className="group flex-shrink-0 p-3 rounded-xl bg-white shadow-md hover:shadow-xl transition-all duration-300 text-gray-600 hover:text-[#F57C05] transform hover:-translate-y-1 border border-gray-100"
+                className="group flex-shrink-0 p-2.5 rounded-lg bg-gray-100 hover:bg-[#F57C05] transition-all duration-300 text-gray-600 hover:text-white"
                 aria-label="Back to dashboard"
               >
                 <FaArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
               </Link>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 break-words">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
                   {note.title}
                 </h1>
-                <p className="text-sm text-gray-500 font-medium">
-                  Created on{" "}
+                <p className="text-xs text-gray-500 hidden sm:block">
                   {new Date(note.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
-                    month: "long",
+                    month: "short",
                     day: "numeric",
                   })}
                 </p>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+            {/* Center: Tabs */}
+            <div className="flex-1 flex justify-center max-w-2xl">
+              <nav className="flex gap-1 bg-gray-100 rounded-xl p-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`group flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "bg-white text-[#F57C05] shadow-md"
+                        : "text-gray-600 hover:text-[#F57C05]"
+                    }`}
+                  >
+                    <span className="text-base group-hover:scale-110 transition-transform">
+                      {tab.icon}
+                    </span>
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Right: Action Buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={() => exportSessionInPdf(session_data, note.title)}
-                className="group flex items-center justify-center gap-2 px-5 py-3 bg-white border-2 border-[#F57C05] text-[#F57C05] rounded-xl hover:bg-[#F57C05] hover:text-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 font-semibold flex-1 sm:flex-initial"
+                className="group flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-[#F57C05] text-[#F57C05] rounded-lg hover:bg-[#F57C05] hover:text-white shadow-sm hover:shadow-md transition-all duration-300 font-semibold"
+                title="Export PDF"
               >
                 <FaDownload className="w-4 h-4 group-hover:animate-bounce" />
-                <span>Export PDF</span>
+                <span className="hidden lg:inline">Export</span>
               </button>
               <button
                 onClick={() => setIsChatOpen(!isChatOpen)}
-                className={`group flex items-center justify-center gap-2 px-5 py-3 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 font-semibold flex-1 sm:flex-initial ${
+                className={`group flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 font-semibold ${
                   isChatOpen
                     ? "bg-gray-600 hover:bg-gray-700 text-white"
                     : "bg-gradient-to-r from-[#F57C05] to-[#ff9642] text-white hover:from-[#ff9642] hover:to-[#F57C05]"
                 }`}
+                title={isChatOpen ? "Close Chat" : "Open AI Assistant"}
               >
                 {isChatOpen ? (
                   <>
                     <FaTimes className="w-4 h-4" />
-                    <span>Close Chat</span>
+                    <span className="hidden lg:inline">Close</span>
                   </>
                 ) : (
                   <>
                     <FaComment className="w-4 h-4 group-hover:animate-bounce" />
-                    <span>AI Assistant</span>
+                    <span className="hidden lg:inline">AI Chat</span>
                   </>
                 )}
               </button>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Content Area */}
-          <div
-            className={`transition-all duration-500 ${
-              isChatOpen ? "lg:w-[60%]" : "w-full"
-            }`}
-          >
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-              {/* Tabs Navigation */}
-              <div className="border-b border-gray-100 bg-gray-50/50">
-                <nav className="flex overflow-x-auto scrollbar-hide">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`group flex items-center gap-3 px-6 sm:px-8 py-4 text-sm font-semibold transition-all duration-300 whitespace-nowrap relative ${
-                        activeTab === tab.id
-                          ? "text-[#F57C05] bg-white"
-                          : "text-gray-600 hover:text-[#F57C05] hover:bg-white/50"
-                      }`}
-                    >
-                      <span className="text-xl group-hover:scale-110 transition-transform">
-                        {tab.icon}
-                      </span>
-                      <span>{tab.label}</span>
-                      {activeTab === tab.id && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#F57C05] to-[#ff9642] rounded-t-full" />
-                      )}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-
-              {/* Tab Content */}
-              <div className="p-6 sm:p-8 lg:p-10 bg-white">
-                <div
-                  className={`transition-all duration-300 ${
-                    isLoading ? "opacity-0" : "opacity-100 animate-fadeIn"
-                  }`}
-                >
-                  {activeTab === "notes" && <DetailNotes note={note} />}
-                  {activeTab === "summary" && <Summary note={note} />}
-                  {activeTab === "flashcards" && <Flashcard note={note} />}
-                  {activeTab === "quiz" && <Quizes note={note} />}
-                </div>
+      {/* Main Content - Full Screen Height */}
+      <div
+        ref={containerRef}
+        className="flex max-h-[90vh] flex-1 overflow-hidden"
+      >
+        {/* Content Area - Resizable */}
+        <div
+          className="overflow-y-auto flex-1"
+          style={{
+            width: isChatOpen ? `calc(100% - ${chatWidth}px)` : "100%",
+          }}
+        >
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 lg:p-10">
+              <div
+                className={`transition-all duration-300 ${
+                  isLoading ? "opacity-0" : "opacity-100 animate-fadeIn"
+                }`}
+              >
+                {activeTab === "notes" && <DetailNotes note={note} />}
+                {activeTab === "summary" && <Summary note={note} />}
+                {activeTab === "flashcards" && <Flashcard note={note} />}
+                {activeTab === "quiz" && <Quizes note={note} />}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Chat Bot Sidebar */}
-          {isChatOpen && (
-            <div className="lg:w-[40%] transition-all duration-500 animate-slideIn">
+        {/* Resizable Divider */}
+        {isChatOpen && (
+          <>
+            <div
+              onMouseDown={startResizing}
+              className="hidden lg:flex w-1 bg-gray-200 hover:bg-[#F57C05] cursor-ew-resize transition-colors relative group flex-shrink-0"
+            >
+              {/* Grip Icon */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-300 group-hover:bg-[#F57C05] rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <FaGripVertical className="text-white w-3 h-3" />
+              </div>
+            </div>
+
+            {/* Chat Bot Sidebar - Resizable */}
+            <div
+              className="hidden lg:flex flex-col bg-white border-l border-gray-200 flex-shrink-0"
+              style={{ width: `${chatWidth}px` }}
+            >
               <ChatBot isVisible={isChatOpen} setIsVisible={setIsChatOpen} />
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
+
+      {/* Mobile Chat Overlay */}
+      {isChatOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-white shadow-2xl animate-slideInRight">
+            <ChatBot isVisible={isChatOpen} setIsVisible={setIsChatOpen} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
