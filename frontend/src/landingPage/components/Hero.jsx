@@ -158,21 +158,11 @@ export const Hero = () => {
                   alt={image.alt}
                   className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
                 />
-
-                {/* Play button overlay (if it's a video demo) */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors group cursor-pointer">
-                  <motion.div
-                    whileHover={{ scale: 1.1 }}
-                    className="w-20 h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-xl group-hover:bg-white transition-all"
-                  >
-                    <FaPlay className="w-8 h-8 text-[#2269EB] ml-1" />
-                  </motion.div>
-                </div>
               </div>
             </div>
 
             {/* Floating cards */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 1 }}
@@ -187,9 +177,9 @@ export const Hero = () => {
                   <p className="text-sm text-gray-600">Auto-generated</p>
                 </div>
               </div>
-            </motion.div>
+            </motion.div> */}
 
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 1.2 }}
@@ -204,7 +194,7 @@ export const Hero = () => {
                   <p className="text-sm text-gray-600">Practice mode</p>
                 </div>
               </div>
-            </motion.div>
+            </motion.div> */}
 
             {/* Bottom gradient fade */}
             <div className="absolute -inset-x-20 -bottom-20 bg-gradient-to-t from-white via-white/50 to-transparent h-32 pointer-events-none" />
