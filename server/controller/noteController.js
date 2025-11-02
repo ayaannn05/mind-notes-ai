@@ -11,13 +11,16 @@ const { getPdfText } = require('../helper/pdfParse');
 const { getVideoTranscript } = require('../helper/videoParse');
 
 exports.getNotes = catchAsyncError(async (req, res, next) => {
-    const user = req.user._id;
-    const notes = await Note.find({ userId: user }).populate('flashcards').populate('quizzes');
-    res.status(200).json({
-        status: 'success',
-        totalNotes: notes.length,
-        notes: notes
-    });
+  const user = req.user._id;
+  const notes = await Note.find({ userId: user })
+    .populate("flashcards")
+    .populate("quizzes")
+    .sort({ createdAt: -1 });
+  res.status(200).json({
+    status: "success",
+    totalNotes: notes.length,
+    notes: notes,
+  });
 })
 
 
