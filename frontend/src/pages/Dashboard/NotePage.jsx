@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getNote } from "../../apis/notes";
 import toast from "react-hot-toast";
 import { exportSessionInPdf } from "../../utils/exportToPdf";
@@ -21,10 +21,15 @@ import ChatBot from "../../components/Chatbot";
 const NotePage = () => {
   const { id } = useParams();
   const [note, setNote] = useState(null);
-  const [activeTab, setActiveTab] = useState("notes");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const searchParams = new URLSearchParams(location.search);
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabParam || "notes");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const isChatParams = searchParams.get("chat");
+  const [isChatOpen, setIsChatOpen] = useState(isChatParams === "true");
   const [chatWidth, setChatWidth] = useState(600); // Default chat width
   const [isResizing, setIsResizing] = useState(false);
 
@@ -46,6 +51,12 @@ const NotePage = () => {
     };
     fetchNote();
   }, [id]);
+
+  useEffect(() => {
+    navigate(`/note/${id}?tab=${activeTab}&chat=${isChatOpen} `, {
+      replace: true,
+    });
+  }, [activeTab, id, navigate, isChatOpen]);
 
   // Resizing logic
   const startResizing = () => {
@@ -206,7 +217,12 @@ const NotePage = () => {
                 <span className="hidden lg:inline">Export</span>
               </button>
               <button
-                onClick={() => setIsChatOpen(!isChatOpen)}
+                onClick={() => {
+                  setIsChatOpen(!isChatOpen);
+                  navigate(`/note/${id}?chat=${!isChatOpen}`, {
+                    replace: true,
+                  });
+                }}
                 className={`group flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 font-semibold ${
                   isChatOpen
                     ? "bg-gray-600 hover:bg-gray-700 text-white"
@@ -234,7 +250,7 @@ const NotePage = () => {
       {/* Main Content - Full Screen Height */}
       <div
         ref={containerRef}
-        className="flex max-h-[90vh] flex-1 overflow-hidden"
+        className="flex max-h-[85vh] flex-1 overflow-hidden"
       >
         {/* Content Area - Resizable */}
         <div
