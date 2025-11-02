@@ -52,14 +52,17 @@ export const chatWithAI = async (requestBody) => {
   }
 };
 
-export const getAllMessages = async () => {
+export const getAllMessages = async (noteId) => {
   try {
-    const response = await axios.get(`${API_URL}/api/v1/chat`,{withCredentials: true});
+    const response = await axios.get(`${API_URL}/api/v1/chat/${noteId}`, {
+      withCredentials: true,
+    });
     return response.data;
-  } catch (error) {  if(error.response){
-    throw error.response.data.message;
-  }
-  throw error.message;
+  } catch (error) {
+    if (error.response) {
+      throw error.response.data.message;
+    }
+    throw error.message;
   }
 };
 export const deleteChat = async () => {

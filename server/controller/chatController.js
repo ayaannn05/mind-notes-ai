@@ -51,7 +51,10 @@ exports.generateChat = catchAsync(async (req, res) => {
 
 exports.getAllMessages = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
-    const messages = await ChatbotMessage.find({ userId });
+    const messages = await ChatbotMessage.find({
+      userId,
+      noteId: req.params.noteId,
+    });
     res.status(200).json({
         messages
     });

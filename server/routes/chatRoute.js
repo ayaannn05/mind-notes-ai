@@ -4,6 +4,7 @@ const { generateChat, getAllMessages, deleteChat } = require('../controller/chat
 const { isAuthenticated } = require('../middleware/auth');
 router.use(isAuthenticated)
 
-router.route('/').post(generateChat).get(getAllMessages).delete(deleteChat);
+router.route("/").post(generateChat).delete(deleteChat);
+router.route("/:noteId").get(getAllMessages);
 
 module.exports = router;
