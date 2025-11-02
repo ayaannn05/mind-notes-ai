@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { getNote } from "../../apis/notes";
 import toast from "react-hot-toast";
 import { exportSessionInPdf } from "../../utils/exportToPdf";
-import { FaDownload, FaArrowLeft, FaComment } from "react-icons/fa";
+import { FaDownload, FaArrowLeft, FaComment, FaTimes } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import Flashcard from "../../components/Notes/Flashcard";
 import Quizes from "../../components/Notes/quizes";
@@ -38,30 +38,68 @@ const NotePage = () => {
   }, [id]);
 
   const tabs = [
-    { id: "summary", label: "Summary", icon: "📝" },
-    { id: "notes", label: "Study Notes", icon: "📚" },
-    { id: "flashcards", label: "Flashcards", icon: "🗂️" },
-    { id: "quiz", label: "Quiz", icon: "✍️" },
+    {
+      id: "summary",
+      label: "Summary",
+      icon: "📝",
+      color: "from-blue-500 to-blue-600",
+    },
+    {
+      id: "notes",
+      label: "Study Notes",
+      icon: "📚",
+      color: "from-green-500 to-green-600",
+    },
+    {
+      id: "flashcards",
+      label: "Flashcards",
+      icon: "🗂️",
+      color: "from-purple-500 to-purple-600",
+    },
+    {
+      id: "quiz",
+      label: "Quiz",
+      icon: "✍️",
+      color: "from-pink-500 to-pink-600",
+    },
   ];
 
   if (isLoading) return <Loader />;
+
   if (error)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 px-4">
-        <div className="text-center bg-white p-6 sm:p-8 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300 w-full max-w-md">
-          <h2 className="text-2xl sm:text-3xl font-bold text-red-600 mb-4">
-            Error Loading Note
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50 px-4">
+        <div className="text-center bg-white p-8 sm:p-10 rounded-2xl shadow-2xl max-w-md w-full border border-red-100">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg
+              className="w-10 h-10 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+            Oops! Something went wrong
           </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <p className="text-gray-600 mb-8 text-base">{error}</p>
           <Link
             to="/dashboard"
-            className="inline-block px-4 sm:px-6 py-2 sm:py-3 text-white bg-gradient-to-r from-[#F17905] to-[#d66804] rounded-lg hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300"
+            className="inline-flex items-center gap-2 px-6 py-3 text-white bg-gradient-to-r from-[#F57C05] to-[#ff9642] rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-300 font-semibold"
           >
+            <FaArrowLeft className="w-4 h-4" />
             Return to Dashboard
           </Link>
         </div>
       </div>
     );
+
   if (!note) return null;
 
   const session_data = {
@@ -72,88 +110,123 @@ const NotePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-gray-50 to-orange-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
-        <div className="mb-6 sm:mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-          <div className="flex items-center space-x-4 sm:space-x-6 w-full sm:w-auto">
-            <Link
-              to="/dashboard"
-              className="p-2 sm:p-3 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 text-gray-600 hover:text-[#F17905] transform hover:-translate-y-1"
-            >
-              <FaArrowLeft className="w-4 h-4 sm:w-6 sm:h-6" />
-            </Link>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight bg-gradient-to-r from-[#F17905] to-[#d66804] bg-clip-text text-transparent truncate">
-              {note.title}
-            </h1>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <button
-              onClick={() => exportSessionInPdf(session_data, note.title)}
-              className="group flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-white border-2 border-[#F17905] text-[#F17905] rounded-xl hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full sm:w-auto justify-center"
-            >
-              <FaDownload className="mr-2 group-hover:animate-bounce" />
-              Export PDF
-            </button>
-            <button
-              onClick={() => setIsChatOpen(!isChatOpen)}
-              className={`group flex items-center px-4 sm:px-6 py-2 sm:py-3 ${
-                isChatOpen
-                  ? "bg-gray-200"
-                  : "bg-gradient-to-r from-[#F17905] to-[#d66804]"
-              } text-white rounded-xl hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full sm:w-auto justify-center`}
-            >
-              <FaComment className="mr-2 group-hover:animate-bounce" />
-              {isChatOpen ? "Close Chat" : "Open Chat"}
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+        {/* Header Section */}
+        <div className="mb-8 sm:mb-12">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+            {/* Title Section */}
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              <Link
+                to="/dashboard"
+                className="group flex-shrink-0 p-3 rounded-xl bg-white shadow-md hover:shadow-xl transition-all duration-300 text-gray-600 hover:text-[#F57C05] transform hover:-translate-y-1 border border-gray-100"
+                aria-label="Back to dashboard"
+              >
+                <FaArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              </Link>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 break-words">
+                  {note.title}
+                </h1>
+                <p className="text-sm text-gray-500 font-medium">
+                  Created on{" "}
+                  {new Date(note.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+              <button
+                onClick={() => exportSessionInPdf(session_data, note.title)}
+                className="group flex items-center justify-center gap-2 px-5 py-3 bg-white border-2 border-[#F57C05] text-[#F57C05] rounded-xl hover:bg-[#F57C05] hover:text-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 font-semibold flex-1 sm:flex-initial"
+              >
+                <FaDownload className="w-4 h-4 group-hover:animate-bounce" />
+                <span>Export PDF</span>
+              </button>
+              <button
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className={`group flex items-center justify-center gap-2 px-5 py-3 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 font-semibold flex-1 sm:flex-initial ${
+                  isChatOpen
+                    ? "bg-gray-600 hover:bg-gray-700 text-white"
+                    : "bg-gradient-to-r from-[#F57C05] to-[#ff9642] text-white hover:from-[#ff9642] hover:to-[#F57C05]"
+                }`}
+              >
+                {isChatOpen ? (
+                  <>
+                    <FaTimes className="w-4 h-4" />
+                    <span>Close Chat</span>
+                  </>
+                ) : (
+                  <>
+                    <FaComment className="w-4 h-4 group-hover:animate-bounce" />
+                    <span>AI Assistant</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* Main Content */}
         <div className="flex flex-col lg:flex-row gap-6">
+          {/* Content Area */}
           <div
-            className={`flex-1 transition-all duration-300 ${
-              isChatOpen ? "lg:w-2/3" : "w-full"
+            className={`transition-all duration-500 ${
+              isChatOpen ? "lg:w-[60%]" : "w-full"
             }`}
           >
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 hover:shadow-3xl backdrop-blur-lg backdrop-filter">
-              <div className="border-b overflow-x-auto">
-                <nav className="flex flex-nowrap min-w-full">
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+              {/* Tabs Navigation */}
+              <div className="border-b border-gray-100 bg-gray-50/50">
+                <nav className="flex overflow-x-auto scrollbar-hide">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center space-x-2 sm:space-x-3 px-4 sm:px-8 py-3 sm:py-5 text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+                      className={`group flex items-center gap-3 px-6 sm:px-8 py-4 text-sm font-semibold transition-all duration-300 whitespace-nowrap relative ${
                         activeTab === tab.id
-                          ? "text-[#F17905] border-b-2 border-[#F17905] bg-gradient-to-b from-orange-50 to-white"
-                          : "text-gray-500 hover:text-[#F17905] hover:bg-orange-50"
+                          ? "text-[#F57C05] bg-white"
+                          : "text-gray-600 hover:text-[#F57C05] hover:bg-white/50"
                       }`}
                     >
-                      <span className="text-base sm:text-xl">{tab.icon}</span>
-                      <span className="font-semibold">{tab.label}</span>
+                      <span className="text-xl group-hover:scale-110 transition-transform">
+                        {tab.icon}
+                      </span>
+                      <span>{tab.label}</span>
+                      {activeTab === tab.id && (
+                        <span className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-[#F57C05] to-[#ff9642] rounded-t-full" />
+                      )}
                     </button>
                   ))}
                 </nav>
               </div>
 
-              <div className="p-4 sm:p-8 animate-fadeIn">
+              {/* Tab Content */}
+              <div className="p-6 sm:p-8 lg:p-10 bg-white">
                 <div
-                  className={`transition-all duration-300 transform ${
-                    isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"
+                  className={`transition-all duration-300 ${
+                    isLoading ? "opacity-0" : "opacity-100 animate-fadeIn"
                   }`}
                 >
                   {activeTab === "notes" && <DetailNotes note={note} />}
-
                   {activeTab === "summary" && <Summary note={note} />}
-
                   {activeTab === "flashcards" && <Flashcard note={note} />}
-
                   {activeTab === "quiz" && <Quizes note={note} />}
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Chat Bot Sidebar */}
           {isChatOpen && (
-            <ChatBot isVisible={isChatOpen} setIsVisible={setIsChatOpen} />
+            <div className="lg:w-[40%] transition-all duration-500 animate-slideIn">
+              <ChatBot isVisible={isChatOpen} setIsVisible={setIsChatOpen} />
+            </div>
           )}
         </div>
       </div>
