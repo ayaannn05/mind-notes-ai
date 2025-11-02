@@ -3,333 +3,389 @@ import "jspdf-autotable";
 import toast from "react-hot-toast";
 
 export const exportSessionInPdf = (sessionData, session_name) => {
-  const app_name = "MIND NOTES AI"
+  const app_name = "MIND NOTES AI";
+
   try {
     const doc = new jsPDF("p", "mm", "a4");
+    const pageHeight = 275; // Safe area for content
+    const pageWidth = 210;
+    const margin = 15;
+    const contentWidth = pageWidth - margin * 2;
 
-    const pageHeight = 280; // A4 page height in mm
-    const brandColor = [224, 111, 4]; // #E16F04 orange
-    const textColor = [51, 51, 51]; // Dark gray for text
-    const accentColor = [255, 236, 217]; // Light orange for accents
+    // Enhanced color palette
+    const colors = {
+      primary: [245, 124, 5],
+      primaryLight: [255, 150, 66],
+      accent: [255, 236, 217],
+      text: [51, 51, 51],
+      textLight: [102, 102, 102],
+      white: [255, 255, 255],
+      success: [46, 125, 50],
+      successBg: [232, 245, 233],
+      cardBg: [250, 250, 250],
+      border: [224, 224, 224],
+      codeBg: [40, 44, 52],
+      codeText: [171, 178, 191],
+      codeKeyword: [198, 120, 221],
+      codeString: [152, 195, 121],
+      codeFunction: [97, 175, 239],
+      codeNumber: [209, 154, 102],
+      answerBg: [232, 245, 233],
+    };
 
-    const renderMarkdownToPdf = (
-      doc,
-      text,
-      startY,
-      maxWidth = 180,
-      lineHeight = 7
-    ) => {
-      const lines = text.split("\n");
+    let pageNumber = 0;
+
+    // Add page header
+    const addPageHeader = () => {
+      doc.setFillColor(...colors.primary);
+      doc.rect(0, 0, pageWidth, 12, "F");
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...colors.white);
+      doc.text(app_name, margin, 8);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`Page ${pageNumber}`, pageWidth - margin, 8, { align: "right" });
+    };
+
+    // Clean text helper
+    const cleanText = (text) => {
+      if (!text) return "";
+      return text
+        .replace(/\*\*/g, "")
+        .replace(/\*/g, "")
+        .replace(/^#+\s/, "")
+        .replace(/^>\s/, "")
+        .replace(/`/g, "")
+        .trim();
+    };
+
+    // Syntax highlighting for code
+    const renderCodeBlock = (code, startY) => {
       let cursorY = startY;
 
-      lines.forEach((line) => {
+      // Code block background
+      const lines = code.split("\n");
+      const blockHeight = Math.min(lines.length * 5 + 10, 100);
+
+      doc.setFillColor(...colors.codeBg);
+      doc.roundedRect(
+        margin,
+        cursorY - 5,
+        contentWidth,
+        blockHeight,
+        3,
+        3,
+        "F"
+      );
+
+      // Render code with syntax highlighting
+      doc.setFont("courier", "normal");
+      doc.setFontSize(9);
+
+      lines.slice(0, 18).forEach((line, index) => {
+        // Limit lines to prevent overflow
         if (cursorY > pageHeight) {
           doc.addPage();
-          // Add header to new page
-          doc.setFillColor(...brandColor);
-          doc.rect(0, 0, 210, 15, "F");
+          pageNumber++;
+          addPageHeader();
+          cursorY = 25;
+          doc.setFillColor(...colors.codeBg);
+          doc.roundedRect(margin, cursorY - 5, contentWidth, 50, 3, 3, "F");
+        }
+
+        // Simple syntax highlighting
+        if (
+          line.includes("function") ||
+          line.includes("const") ||
+          line.includes("return")
+        ) {
+          doc.setTextColor(...colors.codeKeyword);
+        } else if (line.includes('"') || line.includes("'")) {
+          doc.setTextColor(...colors.codeString);
+        } else if (line.match(/\d+/)) {
+          doc.setTextColor(...colors.codeNumber);
+        } else {
+          doc.setTextColor(...colors.codeText);
+        }
+
+        const trimmedLine = line.substring(0, 90); // Prevent overflow
+        doc.text(trimmedLine, margin + 3, cursorY);
+        cursorY += 5;
+      });
+
+      if (lines.length > 18) {
+        doc.setTextColor(...colors.textLight);
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(8);
+        doc.text("... (code truncated for space)", margin + 3, cursorY);
+        cursorY += 5;
+      }
+
+      return cursorY + 10;
+    };
+
+    // Enhanced markdown rendering
+    const renderMarkdownToPdf = (doc, text, startY) => {
+      const lines = text.split("\n");
+      let cursorY = startY;
+      let inCodeBlock = false;
+      let codeContent = "";
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Handle code blocks
+        if (line.trim().startsWith("```")) {
+          if (inCodeBlock) {
+            cursorY = renderCodeBlock(codeContent, cursorY);
+            codeContent = "";
+            inCodeBlock = false;
+          } else {
+            inCodeBlock = true;
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          codeContent += line + "\n";
+          continue;
+        }
+
+        // Check page break
+        if (cursorY > pageHeight) {
+          doc.addPage();
+          pageNumber++;
+          addPageHeader();
           cursorY = 25;
         }
 
-        // Handle table formatting
+        // Skip empty lines
+        if (!line.trim()) {
+          cursorY += 3;
+          continue;
+        }
+
+        // Tables
         if (line.includes("|")) {
-          if (line.startsWith("|-")) return;
+          if (line.startsWith("|-")) continue;
 
           const cells = line.split("|").filter((cell) => cell.trim());
-          const tableData = [cells.map((cell) => cell.trim())];
+          const isHeader = i === 0 || lines[i - 1].includes("|-");
 
-          doc.autoTable({
-            startY: cursorY,
-            head: line.includes("Situation") ? [cells.map((cell) => cell.trim())] : null,
-            body: !line.includes("Situation") ? tableData : null,
-            theme: "grid",
-            styles: {
-              fontSize: 8, // Decreased font size
-              cellPadding: 2, // Decreased padding
-            },
-            headStyles: {
-              fillColor: brandColor,
-              textColor: [255, 255, 255],
-              fontStyle: "bold",
-              fontSize: 8, // Decreased header font size
-            },
-            columnStyles: {
-              0: { cellWidth: 35 }, // Decreased column widths
-              1: { cellWidth: 35 },
-              2: { cellWidth: 35 },
-              3: { cellWidth: 35 },
-            },
-            alternateRowStyles: {
-              fillColor: accentColor,
-            },
-            margin: { left: 15, right: 15 }, // Added margins
-            tableWidth: 'auto', // Auto width to fit content
-            rowHeight: 10, // Decreased row height
-          });
+          if (isHeader) {
+            doc.autoTable({
+              startY: cursorY,
+              head: [cells.map((cell) => cleanText(cell))],
+              theme: "grid",
+              styles: {
+                fontSize: 9,
+                cellPadding: 3,
+                lineColor: colors.border,
+                lineWidth: 0.1,
+                overflow: "linebreak",
+                cellWidth: "wrap",
+              },
+              headStyles: {
+                fillColor: colors.primary,
+                textColor: colors.white,
+                fontStyle: "bold",
+                fontSize: 9,
+              },
+              columnStyles: {
+                0: { cellWidth: "auto" },
+              },
+              margin: { left: margin, right: margin },
+              tableWidth: "auto",
+            });
+          } else {
+            doc.autoTable({
+              startY: cursorY,
+              body: [cells.map((cell) => cleanText(cell))],
+              theme: "grid",
+              styles: {
+                fontSize: 9,
+                cellPadding: 3,
+                lineColor: colors.border,
+                lineWidth: 0.1,
+                overflow: "linebreak",
+              },
+              alternateRowStyles: {
+                fillColor: colors.accent,
+              },
+              margin: { left: margin, right: margin },
+            });
+          }
 
-          cursorY = doc.lastAutoTable.finalY + 3; // Decreased spacing after table
-          return;
+          cursorY = doc.lastAutoTable.finalY + 5;
+          continue;
         }
 
+        // Main heading (##)
         if (line.startsWith("## ")) {
+          cursorY += 5;
           doc.setFont("helvetica", "bold");
           doc.setFontSize(16);
-          doc.setTextColor(...brandColor);
-          doc.text(line.replace("## ", ""), 15, cursorY);
-          doc.setDrawColor(...brandColor);
+          doc.setTextColor(...colors.primary);
+          const headingText = cleanText(line);
+          doc.text(headingText, margin, cursorY, { maxWidth: contentWidth });
+
+          doc.setDrawColor(...colors.primary);
           doc.setLineWidth(0.5);
-          doc.line(15, cursorY + 1, 195, cursorY + 1);
-          cursorY += lineHeight + 4;
-        } else if (line.startsWith("**")) {
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(12);
-          doc.setTextColor(...brandColor);
-          const boldText = line.replace(/\*\*/g, "");
-          const wrappedLines = doc.splitTextToSize(boldText, maxWidth);
-          wrappedLines.forEach((wrappedLine) => {
-            doc.text(wrappedLine, 15, cursorY);
-            cursorY += lineHeight;
-          });
-        } else if (line.startsWith("* ")) {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(11);
-          doc.setTextColor(...textColor);
-          const bulletLine = `• ${line.replace("* ", "")}`;
-          const wrappedLines = doc.splitTextToSize(bulletLine, maxWidth - 10);
-          wrappedLines.forEach((wrappedLine) => {
-            doc.text(wrappedLine, 20, cursorY);
-            cursorY += lineHeight;
-          });
-        } else {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(11);
-          doc.setTextColor(...textColor);
-          const wrappedLines = doc.splitTextToSize(line, maxWidth);
-          wrappedLines.forEach((wrappedLine) => {
-            doc.text(wrappedLine, 15, cursorY);
-            cursorY += lineHeight;
-          });
+          doc.line(margin, cursorY + 2, pageWidth - margin, cursorY + 2);
+          cursorY += 12;
+          continue;
         }
 
+        // Subheading (###)
+        if (line.startsWith("### ")) {
+          cursorY += 4;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.setTextColor(...colors.text);
+          const subheadingText = cleanText(line);
+          doc.text(subheadingText, margin, cursorY, { maxWidth: contentWidth });
+          cursorY += 10;
+          continue;
+        }
+
+        // Bold text
+        if (line.includes("**")) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.setTextColor(...colors.text);
+          const boldText = cleanText(line);
+          const wrappedLines = doc.splitTextToSize(boldText, contentWidth);
+
+          wrappedLines.forEach((wrappedLine) => {
+            if (cursorY > pageHeight) {
+              doc.addPage();
+              pageNumber++;
+              addPageHeader();
+              cursorY = 25;
+            }
+            doc.text(wrappedLine, margin, cursorY);
+            cursorY += 6.5;
+          });
+          cursorY += 2;
+          continue;
+        }
+
+        // Bullet points
+        if (line.trim().startsWith("* ") || line.trim().startsWith("- ")) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(...colors.text);
+
+          const bulletText = cleanText(line);
+          const wrappedLines = doc.splitTextToSize(
+            `-  ${bulletText}`,
+            contentWidth - 10
+          );
+
+          wrappedLines.forEach((wrappedLine, index) => {
+            if (cursorY > pageHeight) {
+              doc.addPage();
+              pageNumber++;
+              addPageHeader();
+              cursorY = 25;
+            }
+            doc.text(
+              wrappedLine,
+              index === 0 ? margin + 5 : margin + 8,
+              cursorY
+            );
+            cursorY += 6;
+          });
+          cursorY += 1;
+          continue;
+        }
+
+        // Regular paragraph
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(...colors.text);
+        const wrappedLines = doc.splitTextToSize(cleanText(line), contentWidth);
+
+        wrappedLines.forEach((wrappedLine) => {
+          if (cursorY > pageHeight) {
+            doc.addPage();
+            pageNumber++;
+            addPageHeader();
+            cursorY = 25;
+          }
+          doc.text(wrappedLine, margin, cursorY);
+          cursorY += 6;
+        });
         cursorY += 2;
-      });
+      }
 
       return cursorY;
     };
-    // Modern Title Page
-    doc.setFillColor(...brandColor);
-    doc.rect(0, 0, 210, 297, "F");
-    doc.setTextColor(255, 255, 255);
+
+    // ========== TITLE PAGE ==========
+    doc.setFillColor(...colors.primary);
+    doc.rect(0, 0, pageWidth, 297, "F");
+
+    doc.setFillColor(...colors.primaryLight);
+    doc.circle(180, 30, 40, "F");
+    doc.setFillColor(...colors.primary);
+    doc.circle(30, 260, 35, "F");
+
+    doc.setTextColor(...colors.white);
     doc.setFont("helvetica", "bold");
-    
-    // App name at top
-    doc.setFontSize(28);
-    doc.text(app_name, 105, 50, { align: "center" });
-    
-    // Session name centered
-    doc.setFontSize(12);
-    const wrappedTitle = doc.splitTextToSize(session_name, 170);
-    doc.text(wrappedTitle, 105, 150, { align: "center" });
-    
-    // Additional info
+    doc.setFontSize(32);
+    doc.text(app_name, pageWidth / 2, 60, { align: "center" });
+
+    doc.setDrawColor(...colors.white);
+    doc.setLineWidth(0.5);
+    doc.line(40, 70, 170, 70);
+
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(14);
-    doc.text("Study Notes", 105, 100, { align: "center" });
-    doc.text(new Date().toLocaleDateString(), 105, 110, { align: "center" });
+    doc.setFontSize(16);
+    doc.text("Study Notes", pageWidth / 2, 85, { align: "center" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    const wrappedTitle = doc.splitTextToSize(session_name, 160);
+    const titleY = 140;
+    wrappedTitle.forEach((line, index) => {
+      doc.text(line, pageWidth / 2, titleY + index * 10, { align: "center" });
+    });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    const formattedDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    doc.text(formattedDate, pageWidth / 2, 220, { align: "center" });
+
     doc.addPage();
+    pageNumber = 1;
 
-    // Header for content pages
-    doc.setFillColor(...brandColor);
-    doc.rect(0, 0, 210, 15, "F");
-    let cursorY = 30;
-
-    // Notes Section
+    // ========== DETAILED NOTES ==========
     if (sessionData.notes) {
-      doc.setFontSize(20);
+      addPageHeader();
+      let cursorY = 25;
+
+      doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(...brandColor);
-      doc.text("Detailed Notes", 15, cursorY);
-      doc.setLineWidth(0.5);
-      doc.setDrawColor(...brandColor);
-      doc.line(15, cursorY + 1, 195, cursorY + 1);
+      doc.setTextColor(...colors.primary);
+      doc.text("Detailed Notes", margin, cursorY);
       cursorY += 15;
+
       cursorY = renderMarkdownToPdf(doc, sessionData.notes, cursorY);
     }
 
-    // Summary Section with new page
-    if (sessionData.summary) {
-      doc.addPage();
-      doc.setFillColor(...brandColor);
-      doc.rect(0, 0, 210, 15, "F");
-      cursorY = 30;
-      doc.setFontSize(20);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...brandColor);
-      doc.text("Summary", 15, cursorY);
-      doc.setLineWidth(0.5);
-      doc.line(15, cursorY + 1, 195, cursorY + 1);
-      cursorY += 15;
-      cursorY = renderMarkdownToPdf(doc, sessionData.summary, cursorY);
-    }
-
-    // Quiz Section
-    if (sessionData.quiz && sessionData.quiz[0]?.questions?.length > 0) {
-      doc.addPage();
-      doc.setFillColor(...brandColor);
-      doc.rect(0, 0, 210, 15, "F");
-      cursorY = 30;
-      doc.setFontSize(20);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...brandColor);
-      doc.text("Practice Questions", 15, cursorY);
-      doc.setLineWidth(0.5);
-      doc.line(15, cursorY + 1, 195, cursorY + 1);
-      cursorY += 15;
-
-      sessionData.quiz[0].questions.forEach((question, index) => {
-        if (cursorY > pageHeight) {
-          doc.addPage();
-          doc.setFillColor(...brandColor);
-          doc.rect(0, 0, 210, 15, "F");
-          cursorY = 30;
-        }
-
-        // Question text
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...brandColor);
-        
-        // Calculate height needed for question text
-        const wrappedQuestion = doc.splitTextToSize(
-          `Q${index + 1}. ${question.question}`,
-          175
-        );
-        const questionHeight = wrappedQuestion.length * 8;
-
-        // Draw background box with calculated height
-        doc.setFillColor(...accentColor);
-        doc.roundedRect(10, cursorY - 5, 190, questionHeight + 5, 2, 2, "F");
-        
-        // Render question text
-        wrappedQuestion.forEach((line) => {
-          doc.text(line, 15, cursorY);
-          cursorY += 8;
-        });
-
-        // Options
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(...textColor);
-        
-        // Number options starting from 1
-        question.options.forEach((option, optIndex) => {
-          if (cursorY > pageHeight) {
-            doc.addPage();
-            doc.setFillColor(...brandColor);
-            doc.rect(0, 0, 210, 15, "F");
-            cursorY = 30;
-          }
-          
-          const wrappedOption = doc.splitTextToSize(`${optIndex + 1}. ${option}`, 165);
-          wrappedOption.forEach((line) => {
-            doc.text(line, 20, cursorY);
-            cursorY += 7;
-          });
-        });
-
-        if (cursorY > pageHeight) {
-          doc.addPage();
-          doc.setFillColor(...brandColor);
-          doc.rect(0, 0, 210, 15, "F");
-          cursorY = 30;
-        }
-        
-        // Answer box
-        doc.setFillColor(240, 249, 240);
-        doc.roundedRect(15, cursorY - 5, 180, 20, 2, 2, "F");
-        
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(46, 125, 50);
-        const correctAnswer = doc.splitTextToSize(
-          `Answer: ${question.correct_answer}`,
-          170
-        );
-        correctAnswer.forEach((line) => {
-          doc.text(line, 20, cursorY);
-          cursorY += 7;
-        });
-
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(...textColor);
-        const explanation = doc.splitTextToSize(
-          `${question.explanation}`,
-          170
-        );
-        explanation.forEach((line) => {
-          doc.text(line, 20, cursorY);
-          cursorY += 7;
-        });
-
-        cursorY += 10;
-      });
-    }
-
-    // Flashcards Section
-    if (sessionData.flashcards && sessionData.flashcards[0]?.cards?.length > 0) {
-      doc.addPage();
-      doc.setFillColor(...brandColor);
-      doc.rect(0, 0, 210, 15, "F");
-      cursorY = 30;
-      doc.setFontSize(20);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...brandColor);
-      doc.text("Flashcards", 15, cursorY);
-      doc.setLineWidth(0.5);
-      doc.line(15, cursorY + 1, 195, cursorY + 1);
-      cursorY += 15;
-
-      sessionData.flashcards[0].cards.forEach((card, index) => {
-        if (cursorY > pageHeight) {
-          doc.addPage();
-          doc.setFillColor(...brandColor);
-          doc.rect(0, 0, 210, 15, "F");
-          cursorY = 30;
-        }
-
-        // Card styling
-        doc.setFillColor(...accentColor);
-        doc.roundedRect(15, cursorY - 5, 180, 30, 3, 3, "F");
-        
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...brandColor);
-        const wrappedQuestion = doc.splitTextToSize(
-          `Card ${index + 1} - Front: ${card.front.content}`,
-          170
-        );
-        wrappedQuestion.forEach((line) => {
-          doc.text(line, 20, cursorY);
-          cursorY += 7;
-        });
-
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(...textColor);
-        const wrappedAnswer = doc.splitTextToSize(
-          `Back: ${card.back.content}`,
-          170
-        );
-        wrappedAnswer.forEach((line) => {
-          doc.text(line, 20, cursorY);
-          cursorY += 7;
-        });
-
-        cursorY += 10;
-      });
-    }
-
-    // Save the PDF
+    // Save PDF
     doc.save(`${session_name}_notes.pdf`);
-    toast.success("PDF exported successfully!");
+    toast.success("PDF exported successfully! 📄");
   } catch (error) {
-    toast.error("Error exporting to PDF: " + error.message);
+    console.error("PDF Export Error:", error);
+    toast.error("Failed to export PDF. Please try again.");
   }
-};
+};            
