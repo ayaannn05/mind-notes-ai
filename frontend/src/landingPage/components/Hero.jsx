@@ -213,13 +213,17 @@ const defaultProps = {
     "Effortlessly create detailed notes, flashcards, quizzes, and summaries from videos, PDFs, text, and more. Your ultimate smart note-taking companion, powered by AI!",
   buttons: [
     {
-      title: "Get Started Free",
+      title: "Get Started",
       url: "/login",
       variant: "primary",
     },
   ],
   tagline: "AI-Powered Learning Platform",
-  features: ["No Credit Card Required", "Free Forever Plan", "Cancel Anytime"],
+  features: [
+    "AI-Generated Notes",
+    "Flashcards & Quizzes",
+    "Multi-Format Support",
+  ],
   stats: ["50,000+ Active Users", "1M+ Notes Created", "4.9★ Rating"],
   image: {
     src: heroImage,

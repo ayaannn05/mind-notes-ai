@@ -10,18 +10,31 @@ const { getTranscript, extractVideoId } = require('../helper/youtube');
 const { getPdfText } = require('../helper/pdfParse');
 const { getVideoTranscript } = require('../helper/videoParse');
 
+
+
 exports.getNotes = catchAsyncError(async (req, res, next) => {
   const user = req.user._id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 3;
+  // total number of notes for this user (used to compute totalPages on frontend)
+  const totalNotesCount = await Note.countDocuments({ userId: user });
+
   const notes = await Note.find({ userId: user })
     .populate("flashcards")
     .populate("quizzes")
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit);
+
   res.status(200).json({
     status: "success",
-    totalNotes: notes.length,
+    page,
+    limit,
+    totalNotes: totalNotesCount, // total across all pages
+    results: notes.length, // number returned in this page
     notes: notes,
   });
-})
+});
 
 
 exports.createNote = catchAsyncError(async (req, res, next) => {

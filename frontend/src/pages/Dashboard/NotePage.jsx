@@ -26,6 +26,7 @@ const NotePage = () => {
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
   const tabParam = searchParams.get("tab");
+
   const [activeTab, setActiveTab] = useState(tabParam || "notes");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);

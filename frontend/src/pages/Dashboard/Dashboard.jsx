@@ -2,13 +2,10 @@ import React, { useEffect, useState } from "react";
 import { getUser } from "../../apis/auth";
 import { getAllNotes, deleteNote } from "../../apis/notes";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   FaSearch,
-  FaCog,
-  FaSignOutAlt,
   FaEdit,
-  FaChevronDown,
   FaPlus,
   FaTrash,
   FaFileAlt,
@@ -17,12 +14,23 @@ import {
 import CreateNoteModal from "../../components/CreateNoteModal";
 import EditNoteModal from "../../components/EditNoteModal";
 import useDocumentTitle from "../../hooks/useDocumentTitle";
+import Pagination from "../../components/Pagination";
 
 const Dashboard = () => {
   useDocumentTitle("Dashboard - Mind Notes");
   const [user, setUser] = useState(null);
   const [notes, setNotes] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const initialPage = new URLSearchParams(location.search).get("page");
+  const [currentPage, setCurrentPage] = useState(
+    initialPage ? parseInt(initialPage) : 1
+  );
+
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 3;
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -43,24 +51,41 @@ const Dashboard = () => {
     getUserDetail();
   }, []);
 
-  const getNotes = async () => {
+  useEffect(() => {
+    const p = new URLSearchParams(location.search).get("page");
+    if (p) setCurrentPage(parseInt(p));
+  }, []);
+
+  const getNotes = async (page = currentPage) => {
     try {
-      const data = await getAllNotes();
+      const data = await getAllNotes(page, limit);
+
+      const total = data.totalNotes ?? data.notes.length;
+      const computedTotalPages = Math.max(1, Math.ceil(total / limit));
+
+      if (page > computedTotalPages && computedTotalPages > 0) {
+        setCurrentPage(computedTotalPages);
+        return;
+      }
+
       setNotes(data.notes);
+      setTotalPages(computedTotalPages);
     } catch (error) {
       toast.error(error);
     }
   };
 
   useEffect(() => {
-    getNotes();
-  }, []);
+    navigate(`${location.pathname}?page=${currentPage}`, { replace: true });
+    getNotes(currentPage);
+  }, [currentPage]);
 
   const handleDelete = async () => {
     try {
       setLoading(true);
       await deleteNote(noteToDelete);
-      setNotes(notes.filter((note) => note._id !== noteToDelete));
+      // refetch notes for current page; backend will return new total
+      await getNotes(currentPage);
       toast.success("Note deleted successfully");
       setDeleteModalOpen(false);
     } catch (error) {
@@ -203,6 +228,15 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
+          {!searchTerm && (
+            <div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={(page) => setCurrentPage(page)}
+              />
+            </div>
+          )}
 
           {filteredNotes.length === 0 && (
             <div className="text-center py-8 sm:py-16 bg-white rounded-2xl shadow-sm mt-6">
@@ -228,7 +262,7 @@ const Dashboard = () => {
                     <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">
                       Create your first note and transform your ideas into
                       organized thoughts. Upload files, add text, or import
-                      content - it's all possible!
+                      content - it&apos;s all possible!
                     </p>
                   </div>
                   <button
