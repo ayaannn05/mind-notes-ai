@@ -39,6 +39,9 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [noteToEdit, setNoteToEdit] = useState(null);
 
+  // track if we have loaded the full list for searching
+  const [loadedAllForSearch, setLoadedAllForSearch] = useState(false);
+
   useEffect(() => {
     const getUserDetail = async () => {
       try {
@@ -54,7 +57,7 @@ const Dashboard = () => {
   useEffect(() => {
     const p = new URLSearchParams(location.search).get("page");
     if (p) setCurrentPage(parseInt(p));
-  }, []);
+  }, [location.search]);
 
   const getNotes = async (page = currentPage) => {
     try {
@@ -70,15 +73,92 @@ const Dashboard = () => {
 
       setNotes(data.notes);
       setTotalPages(computedTotalPages);
+      // if we fetched a pageed result, we haven't loaded the full list for searching
+      setLoadedAllForSearch(false);
     } catch (error) {
       toast.error(error);
     }
   };
 
+  // When searchTerm changes, fetch all notes (once) so search works across entire dataset.
+  // Debounce requests so we don't hit the API on every keystroke.
+  useEffect(() => {
+    const term = searchTerm.trim();
+    let mounted = true;
+    const id = setTimeout(async () => {
+      if (term.length === 0) {
+        // restore paginated notes when search cleared (inline fetch to avoid stale-deps)
+        try {
+          setLoading(true);
+          const data = await getAllNotes(currentPage, limit);
+          const total = data.totalNotes ?? data.notes.length;
+          const computedTotalPages = Math.max(1, Math.ceil(total / limit));
+          if (currentPage > computedTotalPages && computedTotalPages > 0) {
+            setCurrentPage(computedTotalPages);
+          } else {
+            setNotes(data.notes);
+            setTotalPages(computedTotalPages);
+            setLoadedAllForSearch(false);
+          }
+        } catch (error) {
+          toast.error(error);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // if already loaded full list for search, no need to refetch
+      if (loadedAllForSearch) return;
+
+      setLoading(true);
+      try {
+        // request a large limit to get all notes; backend will cap appropriately
+        const data = await getAllNotes(1, 100000);
+        if (!mounted) return;
+        setNotes(data.notes);
+        const total = data.totalNotes ?? data.notes.length;
+        setTotalPages(Math.max(1, Math.ceil(total / limit)));
+        setLoadedAllForSearch(true);
+      } catch (error) {
+        toast.error(error);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      mounted = false;
+      clearTimeout(id);
+    };
+  }, [searchTerm, currentPage, loadedAllForSearch]);
+
   useEffect(() => {
     navigate(`${location.pathname}?page=${currentPage}`, { replace: true });
-    getNotes(currentPage);
-  }, [currentPage]);
+
+    // inline paginated fetch to avoid adding getNotes to deps
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getAllNotes(currentPage, limit);
+        const total = data.totalNotes ?? data.notes.length;
+        const computedTotalPages = Math.max(1, Math.ceil(total / limit));
+
+        if (currentPage > computedTotalPages && computedTotalPages > 0) {
+          setCurrentPage(computedTotalPages);
+          return;
+        }
+
+        setNotes(data.notes);
+        setTotalPages(computedTotalPages);
+        setLoadedAllForSearch(false);
+      } catch (error) {
+        toast.error(error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [currentPage, navigate, location.pathname]);
 
   const handleDelete = async () => {
     try {
@@ -101,8 +181,8 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100  ">
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 ">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
               Your Notes
